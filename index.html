@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MALTA2 Boundary-Loss Surrogate | Interactive Modeling</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Explore constant-area aspect ratio profiles and survivable-x regimes for the digital merging boundary-loss surrogate in silicon pixel detectors like MALTA2.">
+  <meta name="keywords" content="MALTA2, Silicon Pixel Detectors, Boundary-Loss, Interactive Toy, Particle Physics, EPJC">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX for high-quality mathematical rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(17, 24, 39, 0.5);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --accent-green: #10b981;
+      --accent-pink: #fb7185;
+      --gradient-primary: linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #4f46e5 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Glows */
+    .ambient-glow-1 {
+      position: absolute;
+      top: -10%;
+      left: 10%;
+      width: 40vw;
+      height: 40vw;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow-2 {
+      position: absolute;
+      top: 40%;
+      right: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, rgba(167, 139, 250, 0.1) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .hero-container {
+      position: relative;
+      z-index: 10;
+      max-width: 1000px;
+      margin: 6rem auto 4rem auto;
+      padding: 0 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(to right, #ffffff 30%, #e0e7ff 70%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto 3rem auto;
+      font-weight: 300;
+    }
+
+    .cta-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.9rem 2.2rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--gradient-primary);
+      color: #ffffff;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(99, 102, 241, 0.6);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* Core Section Grid */
+    .section-container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+      margin-bottom: 5rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      h1 {
+        font-size: 2.25rem;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card-title span {
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.975rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+    }
+
+    /* Math Formula Block */
+    .math-block {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.03);
+      overflow-x: auto;
+    }
+
+    /* Regime Grid Cards */
+    .regime-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .regime-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .regime-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.2s ease;
+    }
+
+    .regime-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .regime-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1.15rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .regime-card p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Interactive Features List */
+    .features-list {
+      list-style-type: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .features-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .features-list li {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .features-list li::before {
+      content: '✓';
+      color: var(--accent-green);
+      font-weight: bold;
+    }
+
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 3rem 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 10;
+    }
+
+    footer a {
+      color: var(--text);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="logo">MALTA2.SURROGATE</div>
+    <nav class="nav-links">
+      <a href="https://github.com/maceacla/malta-toy" target="_blank">View GitHub</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="hero-container">
+    <h1>Exploring Aspect-Loss Profiles<br>of the Boundary-Loss Surrogate</h1>
+    <p class="hero-subtitle">
+      An interactive model validating optimal cluster aspect ratios, digital coincidence merging kernels, and timing/encoding cuts in silicon pixel detectors.
+    </p>
+    <div class="cta-container">
+      <a href="toy.html" class="btn btn-primary" id="launch-toy-cta">Launch Interactive Toy ➔</a>
+      <a href="#about-model" class="btn btn-secondary">Learn the Physics</a>
+    </div>
+  </main>
+
+  <!-- Content Section -->
+  <section class="section-container" id="about-model">
+    
+    <div class="grid">
+      
+      <!-- Card 1: Physics & Equations -->
+      <div class="card">
+        <div class="card-title">
+          <span>01</span> Mathematical Surrogate
+        </div>
+        <p>
+          In silicon pixel detectors like MALTA2, small pixels are grouped into cluster units of size \(N_x \times N_y\). This introduces a crucial optimization trade-off between digital merging coincidence noise and timing cuts:
+        </p>
+        <div class="math-block">
+          \[\Phi(N_x, N_y) = \frac{L_x \, p_x}{N_x} + \frac{L_y \, p_y}{N_y}\]
+        </div>
+        <p>
+          Here, \(p_x, p_y\) represent the coincidence probabilities of digital boundaries, while \(L_x, L_y\) capture the timing or signal survival rates of horizontal and vertical propagation.
+        </p>
+      </div>
+
+      <!-- Card 2: Interactive Capability -->
+      <div class="card">
+        <div class="card-title">
+          <span>02</span> Interactive Simulation
+        </div>
+        <p>
+          Our web simulation maps the constant-area aspect profiles (\(A = N_x \times N_y\)) directly onto a logarithmic scale \(Y = \log_2(N_y / N_x)\), charting the continuous surrogate curves alongside integer factor points.
+        </p>
+        <p>
+          You can tweak physics kernels, adjust the tracking cut strength, and instantly observe where optimal layout structures lie.
+        </p>
+        <ul class="features-list">
+          <li>Physics Kernel Sliders</li>
+          <li>Dynamic Auto-Scaling</li>
+          <li>Simple & Advanced Modes</li>
+          <li>C¹ Smoothstep Hermite curves</li>
+          <li>CSV & JSON Export</li>
+          <li>State URL sharing</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Regimes Grid -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-title" style="margin-bottom: 2rem;">
+        <span>03</span> Physics Regimes Analyzed
+      </div>
+      <div class="regime-grid">
+        
+        <div class="regime-card">
+          <div class="regime-title" style="color: var(--accent-green);">
+            ● Isotropic Regime
+          </div>
+          <p>
+            Under symmetric coincidence probabilities and uniform survival rates (\(\chi = 1.0\)), the absolute optimal cluster aspect ratio is a square layout (\(Y = 0 \implies 8 \times 8\)), minimizing total boundary merges uniformly.
+          </p>
+        </div>
+
+        <div class="regime-card">
+          <div class="regime-title" style="color: var(--accent-pink);">
+            ● Survivable-X Regime
+          </div>
+          <p>
+            When horizontal signals face timing degradation or encoding cuts (\(\chi \le 0.25\)), the continuous optimal layout shifts dynamically towards tall, high-aspect structures (like \(2 \times 32\) or \(4 \times 16\)), saving up to 30% in noise metrics.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      Based on the MALTA2 pixel detector research paper. 
+      Hosted with ❤️ on GitHub Pages. 
+      <br>
+      <a href="https://github.com/maceacla" target="_blank">maceacla</a> &bull; &copy; 2026. All rights reserved.
+    </p>
+  </footer>
+
+</body>
+</html>

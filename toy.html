@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Boundary-Loss Surrogate | Constant-Area Profiles</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX CDN for mathematical typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+
+  <!-- Plotly.js CDN for interactive, high-performance charting -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    :root {
+      /* Theme color tokens - Dark Mode by default */
+      --bg-color: #0b0f19;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-color: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-secondary: #0ea5e9;
+      --accent-success: #10b981;
+      --accent-warning: #f59e0b;
+      --accent-malta: #f43f5e;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      --code-font: 'JetBrains Mono', monospace;
+      --grid-color: rgba(255, 255, 255, 0.06);
+      --sidebar-width: 380px;
+      --backdrop-blur: blur(12px);
+    }
+
+    .light-theme {
+      /* Theme color tokens - Light Mode (matches paper style) */
+      --bg-color: #f8fafc;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(15, 23, 42, 0.08);
+      --text-color: #0f172a;
+      --text-muted: #64748b;
+      --accent-color: #4f46e5;
+      --accent-hover: #3730a3;
+      --accent-secondary: #0284c7;
+      --accent-success: #059669;
+      --accent-warning: #d97706;
+      --accent-malta: #e11d48;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      --grid-color: rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-family);
+      line-height: 1.5;
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+
+    /* Layout structure */
+    .app-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Top Header Styling */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: var(--backdrop-blur);
+      -webkit-backdrop-filter: var(--backdrop-blur);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--accent-color), var(--accent-secondary));
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, var(--text-color) 30%, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Theme Toggle Switch */
+    .theme-toggle-btn {
+      background: var(--card-border);
+      border: 1px solid var(--card-border);
+      color: var(--text-color);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--text-color);
+      color: var(--bg-color);
+      transform: translateY(-1px);
+    }
+
+    /* Active Regime Panel inside Header */
+    .active-regime-bar {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px dashed rgba(99, 102, 241, 0.25);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .light-theme .active-regime-bar {
+      background: rgba(79, 70, 229, 0.05);
+      border-color: rgba(79, 70, 229, 0.2);
+    }
+
+    .regime-badge {
+      font-weight: 600;
+      color: var(--accent-secondary);
+      background: rgba(14, 165, 233, 0.15);
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Dashboard Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sidebar controls */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: var(--backdrop-blur);
+      -webkit-backdrop-filter: var(--backdrop-blur);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Form controls styles */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-label .value-display {
+      font-family: var(--code-font);
+      color: var(--accent-secondary);
+      font-weight: 600;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--card-border);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+      border: 2px solid var(--text-color);
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Segmented Tab Control (Simple/Advanced Modes) */
+    .segmented-control {
+      display: flex;
+      background: var(--card-border);
+      border-radius: 0.5rem;
+      padding: 0.25rem;
+      border: 1px solid var(--card-border);
+    }
+
+    .segment-tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .segment-tab.active {
+      background: var(--accent-color);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Custom select/dropdown */
+    select, input[type="number"], input[type="text"] {
+      background: var(--card-border);
+      border: 1px solid var(--card-border);
+      color: var(--text-color);
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      outline: none;
+      font-family: var(--font-family);
+      width: 100%;
+      cursor: pointer;
+    }
+
+    select:focus, input[type="number"]:focus {
+      border-color: var(--accent-color);
+    }
+
+    /* Checkbox & Grid layout */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--card-border);
+      background: var(--card-border);
+      border-radius: 4px;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      position: relative;
+    }
+
+    .checkbox-container input[type="checkbox"]:checked {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .checkbox-container input[type="checkbox"]:checked::after {
+      content: "";
+      width: 8px;
+      height: 4px;
+      border-left: 2px solid white;
+      border-bottom: 2px solid white;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+
+    /* Action Buttons */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--card-border);
+      color: var(--text-color);
+      border: 1px solid var(--card-border);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: var(--text-color);
+      color: var(--bg-color);
+    }
+
+    .btn-full {
+      grid-column: span 2;
+    }
+
+    /* Main Content Area */
+    .main-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 0; /* Prevents flex items from overflowing */
+    }
+
+    /* Large Plot Card */
+    .plot-card {
+      padding: 1.5rem;
+      height: 600px;
+      position: relative;
+    }
+
+    #plot {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Collapsible About Card */
+    .math-about-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .collapsible-trigger {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .collapsible-trigger .arrow-icon {
+      transition: transform 0.3s ease;
+    }
+
+    .math-about-card.collapsed .collapsible-content {
+      display: none;
+    }
+
+    .math-about-card.collapsed .arrow-icon {
+      transform: rotate(-90deg);
+    }
+
+    .collapsible-content {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .collapsible-content p {
+      margin-bottom: 0.5rem;
+    }
+
+    .math-block {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      overflow-x: auto;
+      border: 1px solid var(--card-border);
+      margin: 0.5rem 0;
+    }
+
+    .light-theme .math-block {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Point Table Card */
+    .table-card {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .table-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 0.5rem;
+      border: 1px solid var(--card-border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th {
+      background: var(--card-border);
+      color: var(--text-color);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+
+    tr:hover td {
+      background: rgba(99, 102, 241, 0.04);
+      color: var(--text-color);
+    }
+
+    tr.optimum-row td {
+      background: rgba(16, 185, 129, 0.05);
+      border-left: 3px solid var(--accent-success);
+    }
+
+    tr.malta-row td {
+      background: rgba(244, 63, 94, 0.05);
+      border-left: 3px solid var(--accent-malta);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.75rem;
+      border-radius: 0.25rem;
+      font-weight: 500;
+    }
+
+    .badge-optimum {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-success);
+    }
+
+    .badge-malta {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--accent-malta);
+    }
+
+    .copy-success-tip {
+      color: var(--accent-success);
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    /* Info Tooltip icon inside UI */
+    .info-tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+    }
+
+    .info-tooltip .tooltip-text {
+      visibility: hidden;
+      width: 220px;
+      background-color: #1e293b;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 0.5rem;
+      position: absolute;
+      z-index: 100;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -110px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 0.75rem;
+      font-weight: 400;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+      line-height: 1.3;
+    }
+
+    .light-theme .info-tooltip .tooltip-text {
+      background-color: #ffffff;
+      color: #0f172a;
+      border-color: rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .info-tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Header -->
+    <header>
+      <div class="header-top">
+        <div>
+          <h1>Interactive Boundary-Loss Surrogate</h1>
+          <div class="subtitle">
+            <span>Constant-Area Profiles (Figure 13)</span>
+            <span>&bull;</span>
+            <span class="math-inline">\(\Phi(N_x, N_y) = \frac{L_x p_x}{N_x} + \frac{L_y p_y}{N_y}\)</span>
+          </div>
+        </div>
+        <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
+          <span id="theme-toggle-icon">☀️</span> <span id="theme-toggle-text">Light Mode</span>
+        </button>
+      </div>
+
+      <!-- Regime Summary Display -->
+      <div class="active-regime-bar">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span class="regime-badge" id="regime-badge-val">Simple Mode</span>
+          <span id="header-regime-math" class="math-inline">\chi = 1.00 \quad | \quad \rho = 1.00 \quad | \quad L_x/L_y = 1.00</span>
+        </div>
+        <div id="header-opt-geometry" style="font-weight: 500; font-size: 0.85rem; color: var(--text-muted);">
+          Optimal aspect ratio: <span id="header-opt-math"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <div class="dashboard-grid">
+      
+      <!-- Left Controls Sidebar -->
+      <div class="sidebar">
+        
+        <!-- Physics Anisotropy -->
+        <div class="card">
+          <div class="card-title">
+            Physics Parameters
+            <span class="info-tooltip">ℹ️
+              <span class="tooltip-text">Controls the spatial anisotropy of coincidences. ρ = py / px. Higher values weight Ny-merging more heavily.</span>
+            </span>
+          </div>
+          <div class="control-group">
+            <div class="control-label">
+              <span>Coincidence Anisotropy (<span class="math-inline">\(\rho = p_y / p_x\)</span>)</span>
+              <span class="value-display" id="rho-val">1.00</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="rho-slider" min="0.1" max="10" step="0.01" value="1.0" oninput="updateParam('rho', this.value)">
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+              <span>0.1 (x-heavy)</span>
+              <span>1.0 (isotropic)</span>
+              <span>10.0 (y-heavy)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Encoding & Survival Anisotropy -->
+        <div class="card">
+          <div class="card-title">
+            Encoding & Survival
+            <span class="info-tooltip">ℹ️
+              <span class="tooltip-text">Models survival cut efficiencies. Advanced mode replicates the MALTA2 physical cliff at Nx=2 versus Nx≥4.</span>
+            </span>
+          </div>
+          
+          <div class="segmented-control" id="mode-tabs">
+            <div class="segment-tab active" onclick="updateMode('simple')">Simple Mode</div>
+            <div class="segment-tab" onclick="updateMode('advanced')">Advanced MALTA2</div>
+          </div>
+
+          <!-- Simple Mode Sliders -->
+          <div id="simple-controls">
+            <div class="control-group">
+              <div class="control-label">
+                 <span>Anisotropy Factor (<span class="math-inline">\(L_x / L_y\)</span>)</span>
+                <span class="value-display" id="lx-simple-val">1.00</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="lx-simple-slider" min="0.1" max="4.0" step="0.01" value="1.0" oninput="updateParam('lxSimple', this.value)">
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+                <span>0.1 (high survival y)</span>
+                <span>1.0 (even survival)</span>
+                <span>4.0 (high survival x)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced MALTA2 controls -->
+          <div id="advanced-controls" style="display: none;">
+            <div class="control-group" style="gap: 0.85rem;">
+              <div>
+                <div class="control-label" style="margin-bottom: 0.25rem;">
+                  <span>Lₓ(Nₓ = 2) <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.7rem; padding: 0.1rem 0.3rem;">FIXED</span></span>
+                  <span class="value-display">0.53</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Standard efficiency due to analog encoding cliff in MALTA2.</div>
+              </div>
+              
+              <div style="border-top: 1px dashed var(--card-border); padding-top: 0.75rem;">
+                <div class="control-label">
+                  <span>Lₓ(Nₓ &ge; 4) slider</span>
+                  <span class="value-display" id="lx-advanced4-val">1.00</span>
+                </div>
+                <div class="slider-container" style="margin-top: 0.25rem;">
+                  <input type="range" id="lx-advanced4-slider" min="0.1" max="1.0" step="0.01" value="1.0" oninput="updateParam('lxAdvanced4', this.value)">
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                  Models survival of Nₓ &ge; 4 tracking cuts.
+                </div>
+              </div>
+
+              <div style="border-top: 1px dashed var(--card-border); padding-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;">
+                 <div>&bull; <span class="math-inline">\(L_y = 1.00\)</span> (Fixed; catastrophic cut for <span class="math-inline">\(N_y \ge 4\)</span>)</div>
+                 <div>&bull; Continuous curves smoothly interpolate <span class="math-inline">\(L_x\)</span> between <span class="math-inline">\(N_x=2\)</span> and <span class="math-inline">\(N_x=4\)</span>.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Normalization Reference -->
+        <div class="card">
+          <div class="card-title">
+            Normalization Reference
+            <span class="info-tooltip">ℹ️
+              <span class="tooltip-text">Selects the denominator geometry (Nx_ref, Ny_ref) used for calculating normalized boundary loss Φ̂.</span>
+            </span>
+          </div>
+          <div class="control-group">
+            <label for="ref-geom-select" class="control-label">Reference Geometry</label>
+            <select id="ref-geom-select" onchange="updateParam('refGeom', this.value)">
+              <option value="2x8">2 × 8 (A = 16)</option>
+              <option value="4x16">4 × 16 (A = 64)</option>
+              <option value="8x8" selected>8 × 8 (A = 64, Paper Default)</option>
+              <option value="16x4">16 × 4 (A = 64)</option>
+              <option value="32x2">32 × 2 (A = 64)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Fixed Group Areas -->
+        <div class="card">
+          <div class="card-title">Fixed Group Areas (A)</div>
+          <div class="control-group">
+            <label class="control-label">Areas to Plot</label>
+            <div class="checkbox-grid">
+              <label class="checkbox-container">
+                <input type="checkbox" id="area-16" checked onchange="toggleArea(16)">
+                <span>A = 16</span>
+              </label>
+              <label class="checkbox-container">
+                <input type="checkbox" id="area-32" checked onchange="toggleArea(32)">
+                <span>A = 32</span>
+              </label>
+              <label class="checkbox-container">
+                <input type="checkbox" id="area-64" checked onchange="toggleArea(64)">
+                <span>A = 64 (Solid)</span>
+              </label>
+              <label class="checkbox-container">
+                <input type="checkbox" id="area-128" checked onchange="toggleArea(128)">
+                <span>A = 128</span>
+              </label>
+              <label class="checkbox-container">
+                <input type="checkbox" id="area-256" checked onchange="toggleArea(256)">
+                <span>A = 256</span>
+              </label>
+            </div>
+            
+            <div style="border-top: 1px dashed var(--card-border); margin-top: 0.5rem; padding-top: 0.5rem;">
+              <div class="control-label" style="margin-bottom: 0.25rem;">Custom Area</div>
+              <input type="number" id="custom-area-input" placeholder="Enter custom area (e.g. 48)" min="4" max="1024" onchange="updateCustomArea(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Display Options -->
+        <div class="card">
+          <div class="card-title">Display Options</div>
+          <div class="control-group" style="gap: 0.6rem;">
+            <label class="checkbox-container">
+              <input type="checkbox" id="display-lines" checked onchange="updateDisplayOption('showLines', this.checked)">
+              <span>Show continuous curves (Lines)</span>
+            </label>
+            <label class="checkbox-container">
+              <input type="checkbox" id="display-markers" checked onchange="updateDisplayOption('showMarkers', this.checked)">
+              <span>Show integer points (Markers)</span>
+            </label>
+            <label class="checkbox-container">
+              <input type="checkbox" id="display-malta" checked onchange="updateDisplayOption('showMalta', this.checked)">
+              <span>Highlight MALTA2 point (Diamond)</span>
+            </label>
+            <label class="checkbox-container">
+              <input type="checkbox" id="display-optimum" checked onchange="updateDisplayOption('showOptimum', this.checked)">
+              <span>Show optimal aspect ratio line</span>
+            </label>
+            
+            <div style="border-top: 1px dashed var(--card-border); margin-top: 0.25rem; padding-top: 0.5rem;">
+              <div class="control-label" style="margin-bottom: 0.25rem;">Loss Type</div>
+              <div style="display: flex; gap: 1rem;">
+                <label class="checkbox-container" style="font-size: 0.8rem;">
+                  <input type="radio" name="loss-type" id="loss-trk" checked onchange="updateLossType('Phi_trk')">
+                  <span>Tracking Loss (<span class="math-inline">\(\Phi_\text{trk}\)</span>)</span>
+                </label>
+                <label class="checkbox-container" style="font-size: 0.8rem;">
+                  <input type="radio" name="loss-type" id="loss-shift" onchange="updateLossType('Phi_shift')">
+                  <span>Shift Only (<span class="math-inline">\(\Phi_\text{shift}\)</span>)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reset & Share buttons -->
+        <div class="card">
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="resetToPaper('isotropic')">Paper (Isotropic)</button>
+            <button class="btn btn-secondary" onclick="resetToPaper('survivable')">Survivable-X</button>
+            <button class="btn btn-full" id="share-btn" onclick="copyShareLink()">🔗 Copy Configuration Link</button>
+          </div>
+          <div class="copy-success-tip" id="copy-tip">
+            <span>✓</span> Link copied to clipboard!
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Main Content Panel (Plot, Math & Table) -->
+      <div class="main-panel">
+        
+        <!-- Plot Area -->
+        <div class="card plot-card">
+          <div id="plot"></div>
+        </div>
+
+        <!-- About Math Reference (Collapsible) -->
+        <div class="card math-about-card" id="about-card">
+          <div class="collapsible-trigger" onclick="toggleCollapsible('about-card')">
+            <h3 style="font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-color);">
+              📘 About the Boundary-Loss Surrogate Model
+            </h3>
+            <span class="arrow-icon" style="font-size: 1.1rem;">▼</span>
+          </div>
+          <div class="collapsible-content">
+            <p>
+              In silicon pixel detectors like MALTA2, small pixels are grouped together (e.g. into clusters of size <span class="math-inline">\(N_x \times N_y\)</span>) to form logic units. The choice of grid geometry <span class="math-inline">\((N_x, N_y)\)</span> introduces a trade-off:
+            </p>
+            <ul>
+              <li><strong>Larger grid widths:</strong> Reduce the coincidence of digital merges across unit boundaries, lowering boundary noise.</li>
+              <li><strong>Physical encoding constraints:</strong> Large grid widths lead to longer lines, introducing routing cuts or "survival cliffs" due to signals arriving too late or suffering pile-up.</li>
+            </ul>
+            <p>
+              The paper models this boundary-loss surrogate <span class="math-inline">\(\Phi(N_x, N_y)\)</span> as:
+            </p>
+            <div class="math-block">
+              $$ \Phi(N_x, N_y) = \frac{L_x \, p_x}{N_x} + \frac{L_y \, p_y}{N_y} $$
+            </div>
+            <p>
+              where <span class="math-inline">\(p_x, p_y\)</span> represent directional digital merging coincidence probabilities, and <span class="math-inline">\(L_x, L_y\)</span> model the physical survival rates. The parameter <span class="math-inline">\(\rho = p_y/p_x\)</span> is the physics anisotropy. Under standard isotropic conditions, <span class="math-inline">\(\rho = 1.0\)</span>.
+            </p>
+            <p>
+              When evaluating a fixed pixel grouping area <span class="math-inline">\(A = N_x \times N_y\)</span>, we obtain the constant-area aspect ratio profile by studying the normalized loss <span class="math-inline">\(\hat{\Phi}\)</span> as a function of the aspect ratio on a logarithmic scale: <span class="math-inline">\(Y = \log_2(N_y / N_x)\)</span>.
+            </p>
+            <p>
+              The continuous optimal aspect ratio is dictated solely by the total system anisotropy parameter <span class="math-inline">\(\chi\)</span>:
+            </p>
+            <div class="math-block">
+              $$ \chi = \frac{L_x / L_y}{\rho} \implies \log_2\left(\frac{N_y^*}{N_x^*}\right) = -\log_2(\chi) $$
+            </div>
+            <p>
+              If <span class="math-inline">\(\chi = 1.0\)</span>, the optimum aspect ratio is <span class="math-inline">\(Y = 0\)</span>, which represents a square layout (<span class="math-inline">\(N_x = N_y\)</span>). When <span class="math-inline">\(\chi < 1.0\)</span> (e.g. survivable-x regime), the ideal layout shifts towards taller grid geometries (<span class="math-inline">\(N_y > N_x\)</span>, positive <span class="math-inline">\(Y\)</span>), which yields substantial savings in overall digital boundary loss.
+            </p>
+          </div>
+        </div>
+
+        <!-- Point Data Table -->
+        <div class="card table-card">
+          <div class="table-header-row">
+            <h3 style="font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+              📊 Integer Geometry Comparison Table
+            </h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="exportData('csv')">CSV Export</button>
+              <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="exportData('json')">JSON Export</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Area (<span class="math-inline">\(A\)</span>)</th>
+                  <th>Geometry (<span class="math-inline">\(N_x \times N_y\)</span>)</th>
+                  <th>Aspect Log₂ (<span class="math-inline">\(N_y/N_x\)</span>)</th>
+                  <th>Raw Loss (<span class="math-inline">\(\Phi\)</span>)</th>
+                  <th>Normalized Loss (<span class="math-inline">\(\hat{\Phi}\)</span>)</th>
+                  <th>Loss Delta vs Best</th>
+                  <th>Flags</th>
+                </tr>
+              </thead>
+              <tbody id="data-table-body">
+                <!-- Javascript will populate this dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let state = {
+      rho: 1.00,
+      mode: 'simple', // 'simple' or 'advanced'
+      lxSimple: 1.00,
+      lxAdvanced4: 1.00,
+      refGeom: '8x8',
+      selectedAreas: [16, 32, 64, 128, 256],
+      customArea: 0,
+      plotType: 'Phi_trk', // 'Phi_trk' or 'Phi_shift'
+      showLines: true,
+      showMarkers: true,
+      showMalta: true,
+      showOptimum: true,
+      theme: 'dark'
+    };
+
+    // Keep track of the active Plotly chart object for resizing
+    let activePlot = null;
+    
+    // Timer for debouncing slider calls
+    let debounceTimer;
+
+    // Initialize application
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Load state from URL Hash if present
+      loadStateFromHash();
+      
+      // 2. Sync HTML elements to reflect state
+      syncUIElements();
+
+      // 3. Render initial plots and tables
+      renderAll();
+      
+      // Resize Plotly when browser window sizes change
+      window.addEventListener('resize', () => {
+        if (activePlot) {
+          Plotly.Plots.resize('plot');
+        }
+      });
+    });
+
+    // Sync HTML control values to the javascript state
+    function syncUIElements() {
+      // Sliders & values
+      document.getElementById('rho-slider').value = state.rho;
+      document.getElementById('rho-val').innerText = state.rho.toFixed(2);
+      
+      document.getElementById('lx-simple-slider').value = state.lxSimple;
+      document.getElementById('lx-simple-val').innerText = state.lxSimple.toFixed(2);
+      
+      document.getElementById('lx-advanced4-slider').value = state.lxAdvanced4;
+      document.getElementById('lx-advanced4-val').innerText = state.lxAdvanced4.toFixed(2);
+
+      // Mode tabs
+      document.querySelectorAll('#mode-tabs .segment-tab').forEach(tab => {
+        if (tab.innerText.toLowerCase().includes(state.mode)) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+      toggleControlsVisibility();
+
+      // Dropdowns & Radios
+      document.getElementById('ref-geom-select').value = state.refGeom;
+      
+      if (state.plotType === 'Phi_trk') {
+        document.getElementById('loss-trk').checked = true;
+      } else {
+        document.getElementById('loss-shift').checked = true;
+      }
+
+      // Checkboxes
+      document.getElementById('area-16').checked = state.selectedAreas.includes(16);
+      document.getElementById('area-32').checked = state.selectedAreas.includes(32);
+      document.getElementById('area-64').checked = state.selectedAreas.includes(64);
+      document.getElementById('area-128').checked = state.selectedAreas.includes(128);
+      document.getElementById('area-256').checked = state.selectedAreas.includes(256);
+      
+      if (state.customArea > 0) {
+        document.getElementById('custom-area-input').value = state.customArea;
+      } else {
+        document.getElementById('custom-area-input').value = '';
+      }
+
+      document.getElementById('display-lines').checked = state.showLines;
+      document.getElementById('display-markers').checked = state.showMarkers;
+      document.getElementById('display-malta').checked = state.showMalta;
+      document.getElementById('display-optimum').checked = state.showOptimum;
+
+      // Theme
+      applyThemeStyles();
+    }
+
+    function toggleControlsVisibility() {
+      if (state.mode === 'simple') {
+        document.getElementById('simple-controls').style.display = 'block';
+        document.getElementById('advanced-controls').style.display = 'none';
+      } else {
+        document.getElementById('simple-controls').style.display = 'none';
+        document.getElementById('advanced-controls').style.display = 'block';
+      }
+    }
+
+    // Toggle Collapsible card sections
+    function toggleCollapsible(cardId) {
+      const card = document.getElementById(cardId);
+      card.classList.toggle('collapsed');
+    }
+
+    // Parameter updates with debounce for sliders
+    function updateParam(paramKey, val) {
+      const floatVal = parseFloat(val);
+      state[paramKey] = floatVal;
+      
+      // Update UI labels immediately
+      if (paramKey === 'rho') document.getElementById('rho-val').innerText = floatVal.toFixed(2);
+      if (paramKey === 'lxSimple') document.getElementById('lx-simple-val').innerText = floatVal.toFixed(2);
+      if (paramKey === 'lxAdvanced4') document.getElementById('lx-advanced4-val').innerText = floatVal.toFixed(2);
+
+      if (paramKey === 'refGeom') {
+        state.refGeom = val;
+      }
+
+      debouncedRender();
+    }
+
+    function updateMode(newMode) {
+      state.mode = newMode;
+      document.querySelectorAll('#mode-tabs .segment-tab').forEach(tab => {
+        if (tab.innerText.toLowerCase().includes(newMode)) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+      toggleControlsVisibility();
+      debouncedRender();
+    }
+
+    function toggleArea(areaVal) {
+      if (state.selectedAreas.includes(areaVal)) {
+        state.selectedAreas = state.selectedAreas.filter(a => a !== areaVal);
+      } else {
+        state.selectedAreas.push(areaVal);
+        state.selectedAreas.sort((a, b) => a - b);
+      }
+      renderAll();
+      saveStateToHash();
+    }
+
+    function updateCustomArea(val) {
+      const area = parseInt(val);
+      if (isNaN(area) || area < 4) {
+        state.customArea = 0;
+        document.getElementById('custom-area-input').value = '';
+      } else {
+        state.customArea = area;
+      }
+      renderAll();
+      saveStateToHash();
+    }
+
+    function updateDisplayOption(key, checked) {
+      state[key] = checked;
+      renderAll();
+      saveStateToHash();
+    }
+
+    function updateLossType(type) {
+      state.plotType = type;
+      renderAll();
+      saveStateToHash();
+    }
+
+    // Reset button controls
+    function resetToPaper(type) {
+      if (type === 'isotropic') {
+        state.rho = 1.00;
+        state.mode = 'simple';
+        state.lxSimple = 1.00;
+        state.refGeom = '8x8';
+        state.plotType = 'Phi_trk';
+      } else if (type === 'survivable') {
+        state.rho = 1.00;
+        state.mode = 'simple';
+        state.lxSimple = 0.25; // Chi = 0.25 / 1.0 = 0.25
+        state.refGeom = '8x8';
+        state.plotType = 'Phi_trk';
+      }
+      syncUIElements();
+      renderAll();
+      saveStateToHash();
+    }
+
+    // Debounce rendering to prevent sluggish slider dragging
+    function debouncedRender() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        renderAll();
+        saveStateToHash();
+      }, 30);
+    }
+
+    // Mathematical Core Computations
+    function getLx(Nx) {
+      if (state.plotType === 'Phi_shift') {
+        return 1.0;
+      }
+      if (state.mode === 'simple') {
+        return state.lxSimple;
+      } else {
+        // Advanced MALTA2-style
+        if (Nx <= 2) {
+          return 0.53; // Fixed physical cliff
+        } else if (Nx >= 4) {
+          return state.lxAdvanced4; // Custom slider value
+        } else {
+          // Smoothstep interpolation between physical endpoints Nx=2 and Nx=4
+          const t = (Nx - 2) / (4 - 2);
+          const smoothT = t * t * (3 - 2 * t);
+          return 0.53 + smoothT * (state.lxAdvanced4 - 0.53);
+        }
+      }
+    }
+
+    function getLy(Ny) {
+      // In all configurations Ly is fixed at 1.00
+      return 1.00;
+    }
+
+    function calculateRawLoss(Nx, Ny) {
+      const Lx = getLx(Nx);
+      const Ly = getLy(Ny);
+      const px = 1.0;
+      const py = state.rho;
+      return (Lx * px) / Nx + (Ly * py) / Ny;
+    }
+
+    // Normalization Factor
+    function getRefLoss() {
+      const parts = state.refGeom.split('x');
+      const Nx_ref = parseInt(parts[0]);
+      const Ny_ref = parseInt(parts[1]);
+      return calculateRawLoss(Nx_ref, Ny_ref);
+    }
+
+    // Render equations, charts and table
+    function renderAll() {
+      const refLoss = getRefLoss();
+      updateHeaderText();
+      
+      const curvesData = [];
+      const tableData = [];
+
+      // Get complete list of areas to plot
+      let areas = [...state.selectedAreas];
+      if (state.customArea > 0 && !areas.includes(state.customArea)) {
+        areas.push(state.customArea);
+      }
+      areas.sort((a, b) => a - b);
+
+      // Color scheme for continuous curves
+      const areaColors = {
+        16: { line: '#38bdf8', fill: 'rgba(56, 189, 248, 0.2)', dash: 'dash' },
+        32: { line: '#34d399', fill: 'rgba(52, 211, 153, 0.2)', dash: 'dash' },
+        64: { line: '#6366f1', fill: 'rgba(99, 102, 241, 0.2)', dash: 'solid' }, // Paper standard
+        128: { line: '#fbbf24', fill: 'rgba(251, 191, 36, 0.2)', dash: 'dash' },
+        256: { line: '#f43f5e', fill: 'rgba(244, 63, 94, 0.2)', dash: 'dash' }
+      };
+
+      const defaultColor = { line: '#a78bfa', fill: 'rgba(167, 139, 250, 0.2)', dash: 'dot' };
+
+      // Initialize min and max X values to dynamically scale the plot
+      let minX = Infinity;
+      let maxX = -Infinity;
+
+      areas.forEach(A => {
+        const colorCfg = areaColors[A] || defaultColor;
+        
+        // 1. Continuous aspect curve data
+        if (state.showLines) {
+          const xVals = [];
+          const yVals = [];
+          
+          // Sample aspect ratio logarithmically to get uniform vertical spacing on Y-axis
+          // Aspect range: log2(1/A) to log2(A). e.g., A=64 yields [-6, 6]
+          const logLimit = Math.log2(A);
+          const steps = 180;
+          
+          for (let i = 0; i <= steps; i++) {
+            const y = -logLimit + (i / steps) * (2 * logLimit);
+            const R = Math.pow(2, y); // Ny / Nx
+            // Solving Nx * Ny = A and Ny/Nx = R: Nx^2 * R = A -> Nx = sqrt(A/R), Ny = sqrt(A*R)
+            const Nx = Math.sqrt(A / R);
+            const Ny = Math.sqrt(A * R);
+            
+            const rawLoss = calculateRawLoss(Nx, Ny);
+            const normLoss = rawLoss / refLoss;
+            
+            xVals.push(normLoss);
+            yVals.push(y);
+
+            if (normLoss < minX) minX = normLoss;
+            if (normLoss > maxX) maxX = normLoss;
+          }
+
+          curvesData.push({
+            x: xVals,
+            y: yVals,
+            mode: 'lines',
+            name: `A = ${A} Profile`,
+            line: {
+              color: colorCfg.line,
+              width: A === 64 ? 3 : 1.75,
+              dash: colorCfg.dash
+            },
+            hoverinfo: 'skip'
+          });
+        }
+
+        // 2. Find all integer factor-pairs
+        const integerPoints = [];
+        for (let Nx = 1; Nx <= A; Nx++) {
+          if (A % Nx === 0) {
+            const Ny = A / Nx;
+            const rawLoss = calculateRawLoss(Nx, Ny);
+            const normLoss = rawLoss / refLoss;
+            const y = Math.log2(Ny / Nx);
+            
+            integerPoints.push({ Nx, Ny, rawLoss, normLoss, y });
+
+            if (normLoss < minX) minX = normLoss;
+            if (normLoss > maxX) maxX = normLoss;
+            
+            // Collect all points for building comparison table
+            tableData.push({ A, Nx, Ny, y, rawLoss, normLoss });
+          }
+        }
+
+        // Highlight actual integer markers on the plot
+        if (state.showMarkers && integerPoints.length > 0) {
+          curvesData.push({
+            x: integerPoints.map(p => p.normLoss),
+            y: integerPoints.map(p => p.y),
+            mode: 'markers+text',
+            name: `A = ${A} Geometries`,
+            marker: {
+              color: colorCfg.line,
+              size: 7,
+              line: { color: state.theme === 'dark' ? '#0f172a' : '#ffffff', width: 1.5 }
+            },
+            text: integerPoints.map(p => `${p.Nx}×${p.Ny}`),
+            textposition: 'top right',
+            font: {
+              family: 'Inter, sans-serif',
+              size: 9,
+              color: state.theme === 'dark' ? '#9ca3af' : '#475569'
+            },
+            customdata: integerPoints.map(p => [p.Nx, p.Ny, p.rawLoss.toFixed(4), p.normLoss.toFixed(4)]),
+            hovertemplate: 
+              `<b>Geometry: %{customdata[0]}×%{customdata[1]}</b><br>` +
+              `Normalized Loss Φ̂: %{customdata[3]}<br>` +
+              `Raw Loss Φ: %{customdata[2]}<br>` +
+              `Aspect Log₂: %{y:.2f}<extra></extra>`
+          });
+        }
+
+        // 3. Highlight MALTA2 special Diamond references
+        if (state.showMalta) {
+          // MALTA2 (2x8) exists for A=16
+          if (A === 16) {
+            const mPt = integerPoints.find(p => p.Nx === 2 && p.Ny === 8);
+            if (mPt) {
+              curvesData.push({
+                x: [mPt.normLoss],
+                y: [mPt.y],
+                mode: 'markers',
+                name: 'MALTA2 (2×8)',
+                marker: {
+                  symbol: 'diamond',
+                  color: '#fb7185',
+                  size: 13,
+                  line: { color: '#ffffff', width: 2 }
+                },
+                hovertemplate: `<b>MALTA2 Reference (2×8)</b><br>Normalized Loss Φ̂: ${mPt.normLoss.toFixed(3)}<extra></extra>`
+              });
+            }
+          }
+          // MALTA2 (8x8) exists for A=64
+          if (A === 64) {
+            const mPt = integerPoints.find(p => p.Nx === 8 && p.Ny === 8);
+            if (mPt) {
+              curvesData.push({
+                x: [mPt.normLoss],
+                y: [mPt.y],
+                mode: 'markers',
+                name: 'MALTA2 (8×8)',
+                marker: {
+                  symbol: 'diamond',
+                  color: '#f43f5e',
+                  size: 13,
+                  line: { color: '#ffffff', width: 2 }
+                },
+                hovertemplate: `<b>MALTA2 Reference (8×8)</b><br>Normalized Loss Φ̂: ${mPt.normLoss.toFixed(3)}<extra></extra>`
+              });
+            }
+          }
+        }
+      });
+
+      // Fallback scaling limits if no finite points exist
+      if (!isFinite(minX)) minX = 0.8;
+      if (!isFinite(maxX)) maxX = 3.2;
+
+      // Add padding for clean margins and display room for point text labels
+      const padLeft = Math.max(0.1, minX - 0.1);
+      const padRight = maxX + 0.25;
+
+      // 4. Theoretical continuous optimum aspect ratio line
+      // Optimum is aspect ratio R = Ny/Nx = 1/Chi -> Y = log2(R) = -log2(Chi)
+      const nominalChi = getNominalChi();
+      const optY = -Math.log2(nominalChi);
+
+      if (state.showOptimum && !isNaN(optY) && isFinite(optY)) {
+        curvesData.push({
+          x: [padLeft, padRight],
+          y: [optY, optY],
+          mode: 'lines',
+          name: 'Optimal Aspect (Cont.)',
+          line: {
+            color: '#10b981',
+            width: 1.5,
+            dash: 'dashdot'
+          },
+          hovertemplate: `Optimal aspect ratio log₂(Ny/Nx): ${optY.toFixed(2)}<extra></extra>`
+        });
+      }
+
+      // Plotly Layout settings based on active theme
+      const isDark = state.theme === 'dark';
+      const layout = {
+        margin: { t: 40, r: 20, b: 50, l: 60 },
+        hovermode: 'closest',
+        showlegend: true,
+        legend: {
+          x: 1,
+          xanchor: 'right',
+          y: 1,
+          font: { color: isDark ? '#f3f4f6' : '#0f172a', size: 10 },
+          bgcolor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          bordercolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          borderwidth: 1
+        },
+        plot_bgcolor: 'rgba(0, 0, 0, 0)',
+        paper_bgcolor: 'rgba(0, 0, 0, 0)',
+        xaxis: {
+          title: {
+            text: 'Normalized boundary loss Φ̂ (relative to reference)',
+            font: { color: isDark ? '#9ca3af' : '#475569', size: 11, family: 'Inter' }
+          },
+          gridcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+          tickcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          tickfont: { color: isDark ? '#9ca3af' : '#475569', size: 10 },
+          zeroline: false,
+          minallowed: 0.1,
+          range: [padLeft, padRight]
+        },
+        yaxis: {
+          title: {
+            text: 'Aspect ratio log₂(N_y / N_x)',
+            font: { color: isDark ? '#9ca3af' : '#475569', size: 11, family: 'Inter' }
+          },
+          gridcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+          tickcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          tickfont: { color: isDark ? '#9ca3af' : '#475569', size: 10 },
+          zeroline: true,
+          zerolinecolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+          zerolinewidth: 1,
+          range: [-6.2, 6.2]
+        }
+      };
+
+      const config = {
+        responsive: true,
+        displayModeBar: false // Disable the bloated plotly bar for premium styling
+      };
+
+      Plotly.react('plot', curvesData, layout, config).then(p => activePlot = p);
+
+      // Populate Table
+      populateTable(tableData);
+    }
+
+    function getNominalChi() {
+      const py = state.rho;
+      const px = 1.0;
+      let lxVal = state.lxSimple;
+      if (state.mode === 'advanced') {
+        lxVal = state.lxAdvanced4; // Use Nominally flat Nx>=4 slider for general chi
+      }
+      if (state.plotType === 'Phi_shift') {
+        return 1.0 / state.rho;
+      }
+      return lxVal / py;
+    }
+
+    function updateHeaderText() {
+      // Nominal summary variables
+      const rho = state.rho;
+      let lxDisplay = state.lxSimple.toFixed(2);
+      let chi = (state.lxSimple / rho);
+      
+      if (state.plotType === 'Phi_shift') {
+        lxDisplay = "1.00";
+        chi = 1.0 / rho;
+        document.getElementById('regime-badge-val').innerText = "Shift-Only (No Cut)";
+        document.getElementById('regime-badge-val').className = "regime-badge";
+        document.getElementById('regime-badge-val').style.background = "rgba(16, 185, 129, 0.15)";
+        document.getElementById('regime-badge-val').style.color = "var(--accent-success)";
+      } else if (state.mode === 'simple') {
+        document.getElementById('regime-badge-val').innerText = "Simple Mode";
+        document.getElementById('regime-badge-val').className = "regime-badge";
+        document.getElementById('regime-badge-val').style.background = "rgba(14, 165, 233, 0.15)";
+        document.getElementById('regime-badge-val').style.color = "var(--accent-secondary)";
+      } else {
+        lxDisplay = `0.53 / ${state.lxAdvanced4.toFixed(2)}`;
+        chi = (state.lxAdvanced4 / rho); // nominal for high Nx
+        document.getElementById('regime-badge-val').innerText = "Advanced MALTA2";
+        document.getElementById('regime-badge-val').className = "regime-badge";
+        document.getElementById('regime-badge-val').style.background = "rgba(244, 63, 94, 0.15)";
+        document.getElementById('regime-badge-val').style.color = "var(--accent-malta)";
+      }
+
+      // Format KaTeX expressions dynamically
+      const latexHeader = `\\chi_\\text{nom} = ${chi.toFixed(2)} \\quad | \\quad \\rho = ${rho.toFixed(2)} \\quad | \\quad L_x/L_y = ${lxDisplay}`;
+      katex.render(latexHeader, document.getElementById('header-regime-math'), { throwOnError: false });
+
+      // Optimal aspect ratio
+      const optY = -Math.log2(chi);
+      const prefixText = state.mode === 'advanced'
+        ? "Nominal Optimal aspect (N_x &ge; 4): "
+        : "Optimal aspect ratio: ";
+      document.getElementById('header-opt-geometry').innerHTML = `${prefixText}<span id="header-opt-math"></span>`;
+      katex.render(`\\log_2(N_y/N_x) = ${optY.toFixed(2)}`, document.getElementById('header-opt-math'), { throwOnError: false });
+    }
+
+    // Populate Comparison Table data
+    function populateTable(tableData) {
+      const tbody = document.getElementById('data-table-body');
+      tbody.innerHTML = '';
+
+      // Find local minima for each area group to highlight the best discrete geometries
+      const minLosses = {};
+      tableData.forEach(row => {
+        if (!minLosses[row.A] || row.normLoss < minLosses[row.A]) {
+          minLosses[row.A] = row.normLoss;
+        }
+      });
+
+      // Sort data primarily by area, then by Nx
+      tableData.sort((a, b) => {
+        if (a.A !== b.A) return a.A - b.A;
+        return a.Nx - b.Nx;
+      });
+
+      tableData.forEach(row => {
+        const isOptimum = row.normLoss === minLosses[row.A];
+        const isMalta2_8 = row.A === 16 && row.Nx === 2 && row.Ny === 8;
+        const isMalta8_8 = row.A === 64 && row.Nx === 8 && row.Ny === 8;
+        const isMalta = (isMalta2_8 || isMalta8_8) && state.showMalta;
+
+        let rowClass = '';
+        if (isOptimum) rowClass = 'optimum-row';
+        else if (isMalta) rowClass = 'malta-row';
+
+        const deltaText = isOptimum 
+          ? `<span class="badge badge-optimum">Best Discrete</span>` 
+          : `+${((row.normLoss - minLosses[row.A]) / minLosses[row.A] * 100).toFixed(1)}%`;
+
+        let flagBadge = '';
+        if (isMalta2_8) flagBadge = `<span class="badge badge-malta">MALTA2 2×8</span>`;
+        else if (isMalta8_8) flagBadge = `<span class="badge badge-malta">MALTA2 8×8</span>`;
+
+        const tr = document.createElement('tr');
+        if (rowClass) tr.className = rowClass;
+        tr.innerHTML = `
+          <td style="font-weight: 600;">A = ${row.A}</td>
+          <td style="font-family: var(--code-font); font-weight: 500;">${row.Nx} × ${row.Ny}</td>
+          <td>${row.y.toFixed(2)}</td>
+          <td>${row.rawLoss.toFixed(4)}</td>
+          <td style="font-weight: 500; color: ${isOptimum ? 'var(--accent-success)' : 'inherit'}">${row.normLoss.toFixed(4)}</td>
+          <td>${deltaText}</td>
+          <td>${flagBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Share configuration URL state sync
+    function saveStateToHash() {
+      const parts = [];
+      parts.push(`rho=${state.rho}`);
+      parts.push(`mode=${state.mode}`);
+      parts.push(`lxSimple=${state.lxSimple}`);
+      parts.push(`lxAdvanced4=${state.lxAdvanced4}`);
+      parts.push(`refGeom=${state.refGeom}`);
+      parts.push(`areas=${state.selectedAreas.join(',')}`);
+      if (state.customArea > 0) parts.push(`customArea=${state.customArea}`);
+      parts.push(`plotType=${state.plotType}`);
+      parts.push(`showLines=${state.showLines}`);
+      parts.push(`showMarkers=${state.showMarkers}`);
+      parts.push(`showMalta=${state.showMalta}`);
+      parts.push(`showOptimum=${state.showOptimum}`);
+      parts.push(`theme=${state.theme}`);
+      
+      window.history.replaceState(null, null, '#' + parts.join('&'));
+    }
+
+    function loadStateFromHash() {
+      const hash = window.location.hash.substring(1);
+      if (!hash) return;
+      
+      const params = new URLSearchParams(hash);
+      if (params.has('rho')) state.rho = parseFloat(params.get('rho'));
+      if (params.has('mode')) state.mode = params.get('mode');
+      if (params.has('lxSimple')) state.lxSimple = parseFloat(params.get('lxSimple'));
+      if (params.has('lxAdvanced4')) state.lxAdvanced4 = parseFloat(params.get('lxAdvanced4'));
+      if (params.has('refGeom')) state.refGeom = params.get('refGeom');
+      if (params.has('areas')) {
+        const str = params.get('areas');
+        state.selectedAreas = str ? str.split(',').map(Number).filter(n => !isNaN(n)) : [];
+      }
+      if (params.has('customArea')) state.customArea = parseInt(params.get('customArea'));
+      if (params.has('plotType')) state.plotType = params.get('plotType');
+      if (params.has('showLines')) state.showLines = params.get('showLines') === 'true';
+      if (params.has('showMarkers')) state.showMarkers = params.get('showMarkers') === 'true';
+      if (params.has('showMalta')) state.showMalta = params.get('showMalta') === 'true';
+      if (params.has('showOptimum')) state.showOptimum = params.get('showOptimum') === 'true';
+      if (params.has('theme')) state.theme = params.get('theme');
+    }
+
+    function copyShareLink() {
+      const shareUrl = window.location.href;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const tip = document.getElementById('copy-tip');
+        tip.style.display = 'flex';
+        setTimeout(() => {
+          tip.style.display = 'none';
+        }, 2500);
+      });
+    }
+
+    // Export Table Data
+    function exportData(format) {
+      const refLoss = getRefLoss();
+      let dataList = [];
+      
+      let areas = [...state.selectedAreas];
+      if (state.customArea > 0 && !areas.includes(state.customArea)) {
+        areas.push(state.customArea);
+      }
+      areas.sort((a, b) => a - b);
+
+      areas.forEach(A => {
+        for (let Nx = 1; Nx <= A; Nx++) {
+          if (A % Nx === 0) {
+            const Ny = A / Nx;
+            const rawLoss = calculateRawLoss(Nx, Ny);
+            const normLoss = rawLoss / refLoss;
+            const y = Math.log2(Ny / Nx);
+            dataList.push({ A, Nx, Ny, aspect_log2: y, raw_loss: rawLoss, normalized_loss: normLoss });
+          }
+        }
+      });
+
+      if (format === 'json') {
+        const blob = new Blob([JSON.stringify(dataList, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `boundary_loss_data_rho_${state.rho.toFixed(2)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (format === 'csv') {
+        let csvContent = 'Area,Nx,Ny,AspectLog2,RawLoss,NormalizedLoss\n';
+        dataList.forEach(row => {
+          csvContent += `${row.A},${row.Nx},${row.Ny},${row.aspect_log2.toFixed(4)},${row.raw_loss.toFixed(6)},${row.normalized_loss.toFixed(6)}\n`;
+        });
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `boundary_loss_data_rho_${state.rho.toFixed(2)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    // Light/Dark Theme Switching
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyThemeStyles();
+      renderAll();
+      saveStateToHash();
+    }
+
+    function applyThemeStyles() {
+      const btn = document.getElementById('theme-toggle');
+      const icon = document.getElementById('theme-toggle-icon');
+      const text = document.getElementById('theme-toggle-text');
+      
+      if (state.theme === 'light') {
+        document.body.classList.add('light-theme');
+        icon.innerText = '🌙';
+        text.innerText = 'Dark Mode';
+      } else {
+        document.body.classList.remove('light-theme');
+        icon.innerText = '☀️';
+        text.innerText = 'Light Mode';
+      }
+    }
+  </script>
+</body>
+</html>
