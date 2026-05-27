@@ -774,7 +774,7 @@
                 <span>A = 16</span>
               </label>
               <label class="checkbox-container">
-                <input type="checkbox" id="area-32" checked onchange="toggleArea(32)">
+                <input type="checkbox" id="area-32" onchange="toggleArea(32)">
                 <span>A = 32</span>
               </label>
               <label class="checkbox-container">
@@ -782,11 +782,11 @@
                 <span>A = 64 (Solid)</span>
               </label>
               <label class="checkbox-container">
-                <input type="checkbox" id="area-128" checked onchange="toggleArea(128)">
+                <input type="checkbox" id="area-128" onchange="toggleArea(128)">
                 <span>A = 128</span>
               </label>
               <label class="checkbox-container">
-                <input type="checkbox" id="area-256" checked onchange="toggleArea(256)">
+                <input type="checkbox" id="area-256" onchange="toggleArea(256)">
                 <span>A = 256</span>
               </label>
             </div>
@@ -942,7 +942,7 @@
       lxSimple: 1.00,
       lxAdvanced4: 1.00,
       refGeom: '8x8',
-      selectedAreas: [16, 32, 64, 128, 256],
+      selectedAreas: [16, 64],
       customArea: 0,
       plotType: 'Phi_trk', // 'Phi_trk' or 'Phi_shift'
       showLines: true,
