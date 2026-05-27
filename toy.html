@@ -632,9 +632,14 @@
             <span class="math-inline">\(\Phi(N_x, N_y) = \frac{L_x p_x}{N_x} + \frac{L_y p_y}{N_y}\)</span>
           </div>
         </div>
-        <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
-          <span id="theme-toggle-icon">☀️</span> <span id="theme-toggle-text">Light Mode</span>
-        </button>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <a href="index.html" class="theme-toggle-btn" style="text-decoration: none; color: var(--text-color); display: inline-flex; align-items: center; gap: 0.35rem;" id="back-to-landing">
+            <span>⬅</span> <span>Back to Article</span>
+          </a>
+          <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
+            <span id="theme-toggle-icon">☀️</span> <span id="theme-toggle-text">Light Mode</span>
+          </button>
+        </div>
       </div>
 
       <!-- Regime Summary Display -->
@@ -1285,15 +1290,15 @@
             name: `A = ${A} Geometries`,
             marker: {
               color: colorCfg.line,
-              size: 7,
+              size: 11,
               line: { color: state.theme === 'dark' ? '#0f172a' : '#ffffff', width: 1.5 }
             },
             text: integerPoints.map(p => `${p.Nx}×${p.Ny}`),
             textposition: 'top right',
             font: {
               family: 'Inter, sans-serif',
-              size: 9,
-              color: state.theme === 'dark' ? '#9ca3af' : '#475569'
+              size: 12,
+              color: state.theme === 'dark' ? '#ffffff' : '#475569'
             },
             customdata: integerPoints.map(p => [p.Nx, p.Ny, p.rawLoss.toFixed(4), p.normLoss.toFixed(4)]),
             hovertemplate: 
@@ -1318,7 +1323,7 @@
                 marker: {
                   symbol: 'diamond',
                   color: '#fb7185',
-                  size: 13,
+                  size: 16,
                   line: { color: '#ffffff', width: 2 }
                 },
                 hovertemplate: `<b>MALTA2 Reference (2×8)</b><br>Normalized Loss Φ̂: ${mPt.normLoss.toFixed(3)}<extra></extra>`
@@ -1337,7 +1342,7 @@
                 marker: {
                   symbol: 'diamond',
                   color: '#f43f5e',
-                  size: 13,
+                  size: 16,
                   line: { color: '#ffffff', width: 2 }
                 },
                 hovertemplate: `<b>MALTA2 Reference (8×8)</b><br>Normalized Loss Φ̂: ${mPt.normLoss.toFixed(3)}<extra></extra>`
